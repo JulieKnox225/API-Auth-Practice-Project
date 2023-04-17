@@ -1,0 +1,82 @@
+const express = require('express');
+const router = express.Router();
+const authenticateToken = require('../../middleware/authenticateMiddle');
+
+
+router.get('/cars', authenticateToken, async function(req, res) {
+    try {
+      const user = req.user;
+      const result = await req.db.query(
+        `SELECT * FROM car 
+          WHERE deleted_flag != 1
+          AND user_id = :user`,
+        {
+          user
+        }
+      );
+      res.status(200).send(result[0]);
+    } catch (err) {
+      res.json({success: false, message: err, data: null})
+    }
+});
+
+router.post('/car', authenticateToken, async function(req, res) {
+    try {
+      const { make, model, year} = req.body;
+      const user = req.user;
+    
+      const query = await req.db.query(
+        `INSERT INTO car (make, model, year, user_id) 
+         VALUES (:make, :model, :year, :user)`,
+        {
+          make,
+          model,
+          year,
+          user
+        }
+      );
+      res.json({ success: true, message: 'Car successfully created', data: null });
+    } catch (err) {
+      res.json({ success: false, message: err, data: null })
+    }
+});
+
+router.delete('/car/:id', async function(req,res) {
+    try {
+      const { id } = req.params;
+  
+      const query = await req.db.query(
+        `UPDATE car  SET deleted_flag = 1 WHERE id = :id`,
+        {
+          id
+        }
+      );
+      res.json({ success: true, message: 'Row deleted.', data: null });
+    } catch (err) {
+      res.json({ success: false, message: err, data: null });
+    }
+});
+
+router.put('/car', async function(req,res) {
+    try {
+      const { column, rowId, value } = req.body;
+      const query = await req.db.query(
+        `UPDATE car SET :column = :value WHERE id = :rowId`,
+        {
+          column,
+          rowId,
+          value
+        }
+      );
+        //this works. I think the problem is it is sending as 'year' and not just year
+      // const query = await req.db.query(
+      //   `UPDATE car SET year = 2005 WHERE id = 1;`
+      // );
+  
+      res.json({ success: true, message: 'Table successfully updated', data: null });
+    } catch (err) {
+      res.json({ success: false, message: err, data: null });
+    }
+});
+
+module.exports = router;
